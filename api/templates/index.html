@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Booking Form</title>
+<style>
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    table, th, td {
+        border: 1px solid black;
+        padding: 8px;
+        text-align: left;
+    }
+</style>
+</head>
+<body>
+    <h2>Booking Form</h2>
+
+    <form id="bookingForm">
+        <label for="name">Name:</label><br>
+        <input type="text" id="name" name="name" required><br><br>
+
+        <label for="email">Email:</label><br>
+        <input type="email" id="email" name="email" required><br><br>
+
+        <label for="checkinDate">Check-in Date:</label><br>
+        <input type="date" id="checkinDate" name="checkinDate" required><br><br>
+
+        <label for="checkoutDate">Check-out Date:</label><br>
+        <input type="date" id="checkoutDate" name="checkoutDate" required><br><br>
+
+        <label for="roomType">Room Type:</label><br>
+        <select id="roomType" name="roomType" required>
+            <option value="">Select Room Type</option>
+            <option value="single">Single</option>
+            <option value="double">Double</option>
+            <option value="suite">Suite</option>
+        </select><br><br>
+
+        <label for="location">Location:</label><br>
+        <input type="text" id="location" name="location" required><br><br>
+
+        <button type="submit" id="startBooking">Start Booking</button><br><br>
+    </form>
+    <hr>
+    <form id="deleteForm">
+        <label for="id">ID:</label><br>
+        <input type="number" id="id" name="id" ><br><br>
+        <button type="submit" id="cancelBooking">Cancel Booking</button>
+    </form>
+
+    <hr>
+    <h2>Bookings</h2>
+
+    <table id="bookingTable">
+        <thead>
+            <tr>
+                <th>ID</th>>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Check-in</th>
+                <th>Check-out</th>
+                <th>Room Type</th>
+                <th>Location</th>
+            </tr>
+        </thead>
+        <tbody id="bookingData">
+            <!-- Bookings will be inserted here dynamically -->
+        </tbody>
+    </table>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const bookingForm = document.getElementById('bookingForm');
+            const deleteForm = document.getElementById('deleteForm')
+            const bookingTableBody = document.getElementById('bookingData');
+            
+            // Fetch existing bookings from the server
+            fetch('http://localhost:3667/bookings')
+                .then(response => response.json())
+                .then(bookings => {
+                    // Populate the table with existing bookings
+                    bookings.forEach(booking => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${booking.id}</td>
+                            <td>${booking.name}</td>
+                            <td>${booking.email}</td>
+                            <td>${booking.checkinDate}</td>
+                            <td>${booking.checkoutDate}</td>
+                            <td>${booking.roomType}</td>
+                            <td>${booking.location}</td>
+                        `;
+                        bookingTableBody.appendChild(row);
+                    });
+
+                    // Add event listener for delete buttons
+                    bookingTableBody.addEventListener('click', function (event) {
+                        if (event.target.classList.contains('deleteBtn')) {
+                            const bookingId = event.target.getAttribute('data-id');
+                            deleteBooking(bookingId);
+                        }
+                    });
+                })
+                .catch(error => console.error('Error fetching bookings:', error));
+
+            // Handle form submission
+            bookingForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+                createBooking();
+            });
+            deleteForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+                const id = document.getElementById('id').value; // Get booking ID to delete
+                if (id) {deleteBooking(id);}
+            });
+            // Function to create a booking
+            function createBooking() {
+                // Collect form data
+                const formData = new FormData(bookingForm);
+                const bookingData = {};
+                formData.forEach((value, key) => {
+                    bookingData[key] = value;
+                });
+
+                // POST data to the server
+                fetch('http://127.0.0.1:3667/bookings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(bookingData),
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to submit booking');
+                    }
+                    return response.json();
+                })
+                .then(newBooking => {
+                    // Optionally, handle the response (e.g., update UI with new booking details)
+                    console.log('New booking created:', newBooking);
+                    // Reload the page after successful booking creation
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Error submitting booking:', error);
+                    // Optionally, display an error message or handle the error appropriately
+                });
+            }                   
+
+
+            // Function to delete a booking
+            function deleteBooking(id) {
+                fetch(`http://127.0.0.1:3667/bookings/${id}`, {
+                    method: 'DELETE',
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to delete booking');
+                    }
+                    return response.json();
+                })
+                .then(deletedBooking => {
+                    console.log(`Booking ${deletedBooking.id} deleted successfully`);
+                    // Optionally, update UI (remove row from table, etc.)
+                    // For demonstration, reload the page to fetch updated bookings
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Error deleting booking:', error);
+                    // Optionally, display an error message or handle the error appropriately
+                });
+            }
+        });
+    </script>
+</body>
+</html>
